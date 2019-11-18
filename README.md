@@ -54,45 +54,50 @@ Have a Daraja singleton instance
 
 
 ```kotlin
-     @Inject lateinit var daraja : Daraja
+     private lateinit var daraja : Daraja
+     
+     //optional, uses @param Env.SANDBOX by default
+     override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        setContentView(R.layout.my_sample_layout)
         
-     private fun getToken() {
-        daraja.getAccessToken(object : DarajaListener<AccessToken> {
-            override fun onResult(accessToken: AccessToken) {
-                var token = accessToken.access_token
-                
-                makePaymentRequest(token)
+            daraja = Daraja.with(CONSUMER_KEY,CONSUMER_SECRET,Env.SANDBOX, object : DarajaListener<AccessToken> {
+                override fun onResult(result: AccessToken) {
+                    Log.e(TAG, " daraja init onResult: ${result.access_token}")
+                }
+
+                override fun onError(error: String?) {
+                    Log.e(TAG, "daraja init onError: $error")
+                }
+
+            })
+     }
+            
+    val lnmExpress = LNMExpress(
+        BUSINESS_SHORTCODE,
+        PASS_KEY,  //https://developer.safaricom.co.ke/test_credentials
+        TransactionType.CustomerPayBillOnline,
+        amount,
+        PartyA,
+        PartyB,
+        phoneNumber,
+        CALLBACK_URL,
+        ACCOUNT_REFERENCE,
+        TRANSACTION_DESCRIPTION
+    )
+            
+     fun initializeSTKPush(daraja: Daraja, context: Context) {
+        daraja.requestMPESAExpress(lnmExpress, object : DarajaListener<LNMResult> {
+            override fun onResult(result: LNMResult) {
+               
+                Toast.makeText(context, "${result.CustomerMessage}", Toast.LENGTH_SHORT).show()
             }
 
-            override fun onError(exception: DarajaException) {
-
+            override fun onError(error: String?) {
+                Log.e(TAG, "stk error ${error}")
             }
+
         })
-    }
-
-    private fun makePaymentRequest(token : String) {
-        var phoneNumber = ""
-        var amount = "100"
-        var accountReference = "2343de"
-        var description = "Payment for airtime"
-
-        daraja.initiatePayment(token, phoneNumber, amount, accountReference, description,
-            object : DarajaPaymentListener{
-                override fun onPaymentRequestComplete(result: PaymentResult) {
-                    Toast.makeText(baseContext, result.CustomerMessage, Toast.LENGTH_LONG).show()
-                }
-
-                override fun onPaymentFailure(exception: DarajaException) {
-                    Toast.makeText(baseContext, exception.message, Toast.LENGTH_LONG).show()
-                }
-
-                override fun onNetworkFailure(exception: DarajaException) {
-                    //This is invoked if the error has to do with infrastructure 404 / no internet
-                    Toast.makeText(baseContext, exception.message, Toast.LENGTH_LONG).show()
-                }
-
-            }
-        )
     }
 ```
 
